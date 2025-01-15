@@ -1,13 +1,13 @@
 #!bin/bash
 
-#테라폼 Output 파일 생성
+# 테라폼 Output 파일 생성
 terraform output -json > output.json
 
-#앤서블 노드 ip 세팅
+# 앤서블 노드 ip 세팅
 cat output.json | jq -r ' .["ansible-nod-ips"].value[]' >> user.info
 cat output.json | jq -r ' .["ansible-nod-ips"].value[]' > keyscan.info
 
-#변수 세팅
+# 변수 세팅
 prjt=$(basename $(pwd))
 amiUserList=("ec2-user" "ubuntu" "ec2-user")
 echo "현재 BastionHost의 OS를 선택해주세요."
@@ -21,14 +21,14 @@ ansUser=$(sed -n '2s/ansible_user=//p' user.info)
 bastionIp=$(cat output.json | jq -r '.["bastion-pub-ip"].value')
 ansSrvIp=$(cat output.json | jq -r '.["ans-srv-pvt-ip"].value')
 
-#로컬호스트 직접 명령
+# 로컬호스트 직접 명령
 ssh-keyscan -t rsa ${bastionIp} >> ~/.ssh/known_hosts
 scp -i ./.ssh/${prjt}-ec2 ./.ssh/${prjt}-ec2 ${bUser}@${bastionIp}:~/.ssh/
 scp -i ./.ssh/${prjt}-ec2 ./user.info ${bUser}@${bastionIp}:~/
 scp -i ./.ssh/${prjt}-ec2 ./keyscan.info ${bUser}@${bastionIp}:~/
 ssh -i ./.ssh/${prjt}-ec2 ${bUser}@${bastionIp} sudo chmod 400 ./.ssh/${prjt}-ec2
 
-#BastionHost에서 사용할 쉘파일 생성
+# BastionHost에서 사용할 쉘파일 생성
 echo "#!bin/bash" > bastion.sh
 echo "ssh-keyscan -t rsa ${ansSrvIp} > /home/${bUser}/.ssh/known_hosts
 " >> bastion.sh
@@ -39,7 +39,7 @@ echo "scp -i ./.ssh/${prjt}-ec2 ./user.info ${ansUser}@${ansSrvIp}:~/
 echo "scp -i ./.ssh/${prjt}-ec2 ./keyscan.info ${ansUser}@${ansSrvIp}:~/
 " >> bastion.sh
 
-#AnsibleServer에서 사용할 쉘파일을 생성하는 쉘파일을 생성
+# AnsibleServer에서 사용할 쉘파일 생성
 echo 'echo "#!bin/bash" > ansible.sh
 ' >> bastion.sh
 echo "ansUser=${ansUser}
@@ -56,7 +56,7 @@ echo "ssh -i ./.ssh/${prjt}-ec2 ${ansUser}@${ansSrvIp} sudo sh ansible.sh
 echo "ssh -i ./.ssh/${prjt}-ec2 ${ansUser}@${ansSrvIp} sudo sh keyscan.sh
 " >> bastion.sh
 
-#ssh-keyscan용 쉘 파일 생성
+# ssh-keyscan용 쉘 파일 생성
 echo "#!/bin/bash" > keyscan.sh
 
 count=$(wc -l < keyscan.info)
@@ -75,7 +75,7 @@ done
 
 echo "ssh-keyscan -t rsa localhost >> /home/${ansUser}/.ssh/known_hosts" >> keyscan.sh
 
-#BastionHost로 쉘파일 전송 및 실행
+# BastionHost로 쉘파일 전송 및 실행
 scp -i ./.ssh/${prjt}-ec2 ./bastion.sh ${bUser}@${bastionIp}:~/
 scp -i ./.ssh/${prjt}-ec2 ./keyscan.sh ${bUser}@${bastionIp}:~/
 ssh -i ./.ssh/${prjt}-ec2 ${bUser}@${bastionIp} sh bastion.sh
