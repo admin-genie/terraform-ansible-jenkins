@@ -1,20 +1,20 @@
 #!/bin/bash
 
-#AWS 가용리전 목록 불러오기
+# AWS 가용리전 목록 불러오기
 aws ec2 describe-regions --query "Regions[].{RegionName: RegionName}" --output text > regions.info
 
-#현재 디렉토리명을 프로젝트명으로 사용
+# 현재 디렉토리명을 프로젝트명으로 사용
 prjt=$(basename $(pwd))
 
-#유저이름 구분용 배열 선언
+# 유저 이름 구분용 배열 선언
 amiList=("AMZN2" "Ubuntu20.4" "RHEL9")
 amiUserList=("ec2-user" "ubuntu" "ec2-user")
 
-#루프문 시작
+# 루프문 시작
 while :
 do
 
-#Provider 선택
+# Provider 선택
 echo "환경을 선택해주세요."
 echo "1.AWS 2.NaverCloud"
 read cloud
@@ -45,7 +45,7 @@ elif [ $cloud == "2" ];then
 	break
 fi
 
-#가용영역 설정
+# 가용 영역 설정
 aws ec2 describe-availability-zones --region $region --query "AvailabilityZones[].{ZoneName: ZoneName}" --output text  > azs.info
 echo ""
 echo "=====가용영역목록====="
@@ -58,7 +58,7 @@ sed -i "s/az-1 = \"[^\"]*\"/az-1 = \"$azs1\"/g" ./modules/vpc/main.tf
 azs2=$(sed -n "${azs_choice2}p" "azs.info")
 sed -i "s/az-2 = \"[^\"]*\"/az-2 = \"$azs2\"/g" ./modules/vpc/main.tf
 
-#VPC 대역 설정
+# VPC 대역 설정
 vpcCidr="10.0.0.0/16"
 read -p "VPC IP 대역 설정[Default:10.0.0.0/16]: " vpcCidrInput
 echo $vpcCidrInput
@@ -66,7 +66,7 @@ if [ -n "$vpcCidrInput" ];then
 	vpcCidr="$vpcCidrInput"
 fi
 
-#서브넷 개수 설정
+# 서브넷 개수 설정
 read -p "아키텍쳐 티어 설정[1/2/3]: " tier
 
 cat <<EOF >> main.tf
@@ -92,16 +92,16 @@ elif [ $sgAuto == "n" ];then
 fi
 
 
-#키페어 생성
+# 키페어 생성
 echo "==========키페어 생성=========="
 keyName="$prjt-ec2"
 mkdir ./.ssh
 ssh-keygen -t rsa -b 4096 -C "" -f "./.ssh/$keyName" -N ""
 
-#인스턴스 관련
+# 인스턴스 관련
 aws ec2 describe-instance-type-offerings --location-type "availability-zone" --region us-east-1 --query "InstanceTypeOfferings[?starts_with(InstanceType, 't3')].[InstanceType]" --output text | sort | uniq > instance.info
 
-#BastionHost
+# BastionHost
 echo ""
 echo "BastionHost AMI 선택"
 echo "=============================="
@@ -120,7 +120,7 @@ aws ec2 describe-images \
 --output text > ami.info
 bAmi=$(sed -n "1p" "ami.info")
 
-#Ansible-Server
+# Ansible-Server
 echo ""
 echo "앤서블 서버 AMI 선택"
 echo "=============================="
@@ -147,7 +147,7 @@ read -p "번호를 선택해주세요: " srvTypeSelect
 srvType=$(sed -n "${srvTypeSelect}p" "instance.info")
 read -p "앤서블 서버 볼륨 크기[최소:20,최대:30]: " srvVolume
 
-#Ansible-Node
+# Ansible-Node
 echo ""
 echo "앤서블 노드 AMI 선택"
 echo "=============================="
@@ -175,7 +175,7 @@ nodType=$(sed -n "${nodTypeSelect}p" "instance.info")
 read -p "앤서블 노드 볼륨 크기[최소:10,최대:30]: " nodVolume
 read -p "앤서블 노드 수량: " nodCount
 
-#Ansible inventory용 파일 생성
+# Ansible inventory용 파일 생성
 if [ ${srvUser} == ${nodUser} ];then
     echo "[all:vars]
 ansible_user=${srvUser}
@@ -240,7 +240,7 @@ output "srv-alb-dns" {
 
 EOF
 
-#설정 파일 출력
+# 설정 파일 출력
 echo "==========현재 설정=========="
 echo "가용영역1: ${azs1}"
 echo "가용영역2: ${azs2}"
@@ -258,7 +258,7 @@ echo "앤서블 노드 용량: ${nodVolume}"
 echo "앤서블 노드 수량: ${nodCount}"
 echo "==========================="
 
-#내용 확인 선택문
+# 내용 확인 선택문
 read -p "위 내용이 맞습니까?[y/n]: " check
 if [ $check == "y" ];then
 	echo "환경설정이 완료되었습니다."
@@ -267,9 +267,9 @@ else
   echo "환경설정을 초기화합니다."
 fi
 
-#루프문 끝
+# 루프문 끝
 done
 
-#테라폼 APPLY
+# 테라폼 APPLY
 terraform init
 terraform apply
